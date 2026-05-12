@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Web Access Tester</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    }
+
+    h1 {
+      margin-top: 0;
+      color: #ffffff;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #d1d5db;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: white;
+      margin-bottom: 16px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #3b82f6;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 13px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    .stat {
+      background: #020617;
+      border: 1px solid #1e293b;
+      padding: 18px;
+      border-radius: 12px;
+    }
+
+    .stat-title {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffffff;
+    }
+
+    .success {
+      color: #22c55e;
+      font-weight: bold;
+    }
+
+    .failed {
+      color: #ef4444;
+      font-weight: bold;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #1f2937;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #020617;
+      color: #cbd5e1;
+    }
+
+    tr:hover {
+      background: #1e293b;
+    }
+
+    .loading {
+      display: none;
+      margin-top: 15px;
+      color: #38bdf8;
+      font-weight: bold;
+    }
+
+    .alert {
+      background: #7f1d1d;
+      color: #fecaca;
+      padding: 14px;
+      border-radius: 10px;
+      display: none;
+      margin-bottom: 16px;
+    }
+
+    .note {
+      color: #94a3b8;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 15px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .card {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Web Access Tester</h1>
+      <p class="note">
+        Program ini digunakan untuk melakukan testing akses ke website milik sendiri.
+        Masukkan URL, jumlah akses, concurrency, dan delay untuk melihat statistik response time.
+      </p>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="testForm">
+        <label>URL Website</label>
+        <input 
+          type="url" 
+          id="url" 
+          placeholder="Contoh: https://example.com" 
+          required 
+        />
+
+        <label>Jumlah Akses</label>
+        <input 
+          type="number" 
+          id="totalRequests" 
+          placeholder="Contoh: 50" 
+          min="1" 
+          max="1000" 
+          value="10" 
+          required 
+        />
+
+        <label>Concurrency / Request Bersamaan</label>
+        <input 
+          type="number" 
+          id="concurrency" 
+          placeholder="Contoh: 2" 
+          min="1" 
+          max="20" 
+          value="2" 
+          required 
+        />
+
+        <label>Delay Antar Batch dalam ms</label>
+        <input 
+          type="number" 
+          id="delayMs" 
+          placeholder="Contoh: 500" 
+          min="0" 
+          max="10000" 
+          value="500" 
+          required 
+        />
+
+        <button type="submit" id="startBtn">Mulai Testing</button>
+
+        <div id="loading" class="loading">
+          Sedang melakukan testing, mohon tunggu...
+        </div>
+      </form>
+    </div>
+
+    <div class="card" id="statsCard" style="display: none;">
+      <h2>Statistik</h2>
+
+      <div class="grid">
+        <div class="stat">
+          <div class="stat-title">Total Request</div>
+          <div class="stat-value" id="totalStat">0</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Sukses</div>
+          <div class="stat-value success" id="successStat">0</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Gagal</div>
+          <div class="stat-value failed" id="failedStat">0</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Success Rate</div>
+          <div class="stat-value" id="successRateStat">0%</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Min Response</div>
+          <div class="stat-value" id="minStat">0 ms</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Max Response</div>
+          <div class="stat-value" id="maxStat">0 ms</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Average Response</div>
+          <div class="stat-value" id="avgStat">0 ms</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Median Response</div>
+          <div class="stat-value" id="medianStat">0 ms</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="resultCard" style="display: none;">
+      <h2>Detail Setiap Akses</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Status</th>
+              <th>Status Code</th>
+              <th>Response Time</th>
+              <th>Waktu</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("testForm");
+    const startBtn = document.getElementById("startBtn");
+    const loading = document.getElementById("loading");
+    const alertBox = document.getElementById("alert");
+
+    const statsCard = document.getElementById("statsCard");
+    const resultCard = document.getElementById("resultCard");
+    const resultBody = document.getElementById("resultBody");
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      alertBox.style.display = "none";
+      statsCard.style.display = "none";
+      resultCard.style.display = "none";
+      resultBody.innerHTML = "";
+
+      const payload = {
+        url: document.getElementById("url").value.trim(),
+        totalRequests: Number(document.getElementById("totalRequests").value),
+        concurrency: Number(document.getElementById("concurrency").value),
+        delayMs: Number(document.getElementById("delayMs").value)
+      };
+
+      startBtn.disabled = true;
+      loading.style.display = "block";
+
+      try {
+        const response = await fetch("/api/test", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+          showAlert(data.message || "Testing gagal.");
+          return;
+        }
+
+        showStats(data.stats);
+        showResults(data.results);
+
+      } catch (error) {
+        showAlert("Gagal menghubungi server: " + error.message);
+      } finally {
+        startBtn.disabled = false;
+        loading.style.display = "none";
+      }
+    });
+
+    function showAlert(message) {
+      alertBox.textContent = message;
+      alertBox.style.display = "block";
+    }
+
+    function showStats(stats) {
+      document.getElementById("totalStat").textContent = stats.totalRequests;
+      document.getElementById("successStat").textContent = stats.successRequests;
+      document.getElementById("failedStat").textContent = stats.failedRequests;
+      document.getElementById("successRateStat").textContent = stats.successRate + "%";
+      document.getElementById("minStat").textContent = stats.minMs + " ms";
+      document.getElementById("maxStat").textContent = stats.maxMs + " ms";
+      document.getElementById("avgStat").textContent = stats.averageMs + " ms";
+      document.getElementById("medianStat").textContent = stats.medianMs + " ms";
+
+      statsCard.style.display = "block";
+    }
+
+    function showResults(results) {
+      resultBody.innerHTML = "";
+
+      results.forEach((item) => {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${item.no}</td>
+          <td class="${item.success ? "success" : "failed"}">
+            ${item.success ? "SUKSES" : "GAGAL"}
+          </td>
+          <td>${item.statusCode || "-"}</td>
+          <td>${item.responseTimeMs} ms</td>
+          <td>${item.time}</td>
+          <td>${item.error || "-"}</td>
+        `;
+
+        resultBody.appendChild(tr);
+      });
+
+      resultCard.style.display = "block";
+    }
+  </script>
+</body>
+</html>
