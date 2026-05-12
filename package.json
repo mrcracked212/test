@@ -1,0 +1,12 @@
+{
+  "name": "web-access-tester",
+  "version": "1.0.0",
+  "description": "Program testing akses website dengan statistik response time",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.3"
+  }
+}
